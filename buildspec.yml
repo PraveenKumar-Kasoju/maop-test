@@ -5,24 +5,29 @@ phases:
     runtime-versions:
       python: 3.8
     commands:
-      - echo "Installing Terraform"
+      - echo "Installing dependencies and tools"
+      - pip install -r requirements.txt  # If you have any Python dependencies
       - curl -LO https://releases.hashicorp.com/terraform/1.0.6/terraform_1.0.6_linux_amd64.zip
-      - if [ -f "/usr/local/bin/terraform" ]; then rm -f /usr/local/bin/terraform; fi
       - unzip -o terraform_1.0.6_linux_amd64.zip
       - mv terraform /usr/local/bin/
   pre_build:
     commands:
-      - echo "Starting pre-build stage"
+      - echo "Pre-build stage"
       - terraform --version
-      - terraform init
   build:
     commands:
       - echo "Starting build stage"
+      - echo "Packaging Lambda function"
+      - zip -r example_lambda.zip example_lambda.py
+      - echo "Initializing Terraform"
+      - terraform init
+      - echo "Planning Terraform"
       - terraform plan
+      - echo "Applying Terraform"
       - terraform apply -auto-approve
   post_build:
     commands:
-      - echo "Starting post-build stage"
+      - echo "Post-build stage"
 artifacts:
   files:
     - '**/*'
