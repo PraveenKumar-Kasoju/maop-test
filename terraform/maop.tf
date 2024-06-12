@@ -20,7 +20,7 @@ resource "aws_subnet" "example_subnet_b" {
 
 resource "aws_iam_role" "lambda_role" {
   name = "lambda_execution_role"
-  
+
   assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -40,7 +40,7 @@ EOF
 resource "aws_iam_role_policy" "lambda_policy" {
   name   = "lambda_policy"
   role   = aws_iam_role.lambda_role.id
-  
+
   policy = <<EOF
 {
   "Version": "2012-10-17",
@@ -73,7 +73,6 @@ resource "aws_security_group" "example_security_group" {
   description = "Example security group for Lambda function"
   vpc_id      = aws_vpc.example_vpc.id
 
-  // Ingress rule allowing incoming traffic on port 443 (HTTPS) from anywhere
   ingress {
     from_port   = 443
     to_port     = 443
@@ -81,7 +80,6 @@ resource "aws_security_group" "example_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  // Ingress rule allowing incoming SSH traffic from a specific IP address range
   ingress {
     from_port   = 22
     to_port     = 22
@@ -89,7 +87,6 @@ resource "aws_security_group" "example_security_group" {
     cidr_blocks = ["192.168.1.0/24"] 
   }
 
-  // Egress rule allowing all outgoing traffic to anywhere
   egress {
     from_port   = 0
     to_port     = 0
@@ -102,7 +99,7 @@ resource "aws_lambda_function" "example_lambda" {
   filename         = "example_lambda.zip"
   function_name    = "example_lambda_function"
   role             = aws_iam_role.lambda_role.arn
-  handler          = "lambda_function.lambda_handler"
+  handler          = "example_lambda.lambda_handler"
   source_code_hash = filebase64sha256("example_lambda.zip")
   runtime          = "python3.8"
 
