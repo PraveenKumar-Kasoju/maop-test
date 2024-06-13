@@ -10,15 +10,18 @@ phases:
   pre_build:
     commands:
       - echo Pre-build started
+      - ls -al  # List all files to verify the structure
   build:
     commands:
       - terraform init
       - terraform apply -auto-approve
+      - ls -al  # List all files to verify the structure
   post_build:
     commands:
       - echo Build completed
       - mkdir -p output
-      - cp path/to/generated/file output/
+      - cp /path/to/generated/file output/ || { echo "File not found"; exit 1; }  # Ensure the file exists before copying
+      - ls -al output  # List the contents of the output directory
 
 artifacts:
   files:
