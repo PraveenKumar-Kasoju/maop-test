@@ -26,12 +26,19 @@ phases:
     commands:
       - echo "Post-build phase started"
       - mkdir -p output
-      - ls -al  # Verify files before copying
+      - echo "Output directory created"
       - cp terraform.tfstate output/ || { echo "File not found"; exit 1; }
+      - echo "File copied to output directory"
       - ls -al output  # List the contents of the output directory to verify the file is copied
       - echo "Post-build phase completed"
 
 artifacts:
+  files:
+    - '**/*'
+  base-directory: 'output'
+
+# Adding extra debugging after artifact phase
+reports:
   files:
     - '**/*'
   base-directory: 'output'
