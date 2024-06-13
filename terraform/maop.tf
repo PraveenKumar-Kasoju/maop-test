@@ -13,8 +13,8 @@ resource "aws_vpc" "my_vpc" {
 
 # Public subnet
 resource "aws_subnet" "public_subnet" {
-  vpc_id            = aws_vpc.my_vpc.id
-  cidr_block        = "10.0.1.0/24"
+  vpc_id                  = aws_vpc.my_vpc.id
+  cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
 
   tags = {
@@ -71,7 +71,7 @@ resource "aws_iam_role" "lambda_role" {
 EOF
 }
 
-# IAM policy for logging from a lambda
+# Custom IAM policy for Lambda
 resource "aws_iam_policy" "iam_policy_for_lambda" {
   name        = "aws_iam_policy_for_terraform_aws_lambda_role"
   path        = "/"
@@ -84,9 +84,12 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
       "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
-        "logs:PutLogEvents"
+        "logs:PutLogEvents",
+        "ec2:CreateNetworkInterface",
+        "ec2:DescribeNetworkInterfaces",
+        "ec2:DeleteNetworkInterface"
       ],
-      "Resource": "arn:aws:logs:*:*:*",
+      "Resource": "*",
       "Effect": "Allow"
     }
   ]
@@ -94,31 +97,40 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
 EOF
 }
 
-# Policy Attachment on the role.
-resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
+# Policy Attachments on the role
+resource "aws_iam_role_policy_attachment" "attach_basic_execution_policy" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "attach_vpc_access_policy" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+resource "aws_iam_role_policy_attachment" "attach_custom_policy" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.iam_policy_for_lambda.arn
 }
 
-# Generates an archive from content, a file, or a directory of files.
-data "archive_file" "zip_the_python_code" {
-  type        = "zip"
-  source_dir  = "${path.module}/python/"
-  output_path = "${path.module}/python/hello-python.zip"
+resource "aws_iam_role_policy_attachment" "attach_s3_full_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
 }
 
-# Create a lambda function
-resource "aws_lambda_function" "terraform_lambda_func" {
-  filename      = data.archive_file.zip_the_python_code.output_path
-  function_name = "Jhooq-Lambda-Function"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "hello-python.lambda_handler"
-  runtime       = "python3.8"
-  vpc_config {
-    subnet_ids         = [aws_subnet.public_subnet.id]
-    security_group_ids = [aws_security_group.lambda_sg.id]
-  }
-  depends_on    = [aws_iam_role_policy_attachment.attach_iam_policy_to_iam_role]
+resource "aws_iam_role_policy_attachment" "attach_vpc_full_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "attach_lambda_full_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "attach_codepipeline_full_access" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess"
 }
 
 # Security group for Lambda
@@ -142,6 +154,35 @@ resource "aws_security_group" "lambda_sg" {
   tags = {
     Name = "lambda_security_group"
   }
+}
+
+# Generates an archive from content, a file, or a directory of files
+data "archive_file" "zip_the_python_code" {
+  type        = "zip"
+  source_dir  = "${path.module}/python"
+  output_path = "${path.module}/python/hello-python.zip"
+}
+
+# Create a lambda function
+resource "aws_lambda_function" "terraform_lambda_func" {
+  filename      = data.archive_file.zip_the_python_code.output_path
+  function_name = "MAOP-Lambda-Function"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "hello-python.lambda_handler"
+  runtime       = "python3.8"
+  vpc_config {
+    subnet_ids         = [aws_subnet.public_subnet.id]
+    security_group_ids = [aws_security_group.lambda_sg.id]
+  }
+  depends_on = [
+    aws_iam_role_policy_attachment.attach_basic_execution_policy,
+    aws_iam_role_policy_attachment.attach_vpc_access_policy,
+    aws_iam_role_policy_attachment.attach_custom_policy,
+    aws_iam_role_policy_attachment.attach_s3_full_access,
+    aws_iam_role_policy_attachment.attach_vpc_full_access,
+    aws_iam_role_policy_attachment.attach_lambda_full_access,
+    aws_iam_role_policy_attachment.attach_codepipeline_full_access,
+  ]
 }
 
 output "terraform_vpc_id" {
