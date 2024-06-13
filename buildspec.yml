@@ -5,31 +5,18 @@ phases:
     runtime-versions:
       python: 3.8
     commands:
-      - echo "Installing dependencies and tools"
-      - pip install -r requirements.txt
-        pip install --upgrade pip==2020.3.1
-      - pip install pandas numpy  #
-      - curl -LO https://releases.hashicorp.com/terraform/1.0.6/terraform_1.0.6_linux_amd64.zip
-      - unzip -o terraform_1.0.6_linux_amd64.zip
+      - apt-get update
+      - apt-get install -y unzip
+      - curl -o terraform.zip https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
+      - unzip terraform.zip
       - mv terraform /usr/local/bin/
   pre_build:
     commands:
-      - echo "Pre-build stage"
-      - terraform --version
+      - echo Pre-build started
   build:
     commands:
-      - echo "Starting build stage"
-      - echo "Packaging Lambda function"
-      - zip -r example_lambda.zip example_lambda.py
-      - echo "Initializing Terraform"
-      - terraform init -input=false
-      - echo "Planning Terraform"
-      - terraform plan -out=tfplan -input=false
-      - echo "Applying Terraform"
-      - terraform apply -auto-approve tfplan
+      - terraform init
+      - terraform apply -auto-approve
   post_build:
     commands:
-      - echo "Post-build stage"
-artifacts:
-  files:
-    - '**/*'
+      - echo Build completed
