@@ -17,6 +17,8 @@ phases:
   post_build:
     commands:
       - echo Build completed
+      - mkdir -p output
+      - cp path/to/generated/file output/
 
 artifacts:
   files:
