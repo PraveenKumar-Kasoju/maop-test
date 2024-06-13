@@ -3,25 +3,33 @@ version: 0.2
 phases:
   install:
     commands:
+      - echo "Install phase started"
       - yum update -y
       - yum install -y unzip
       - curl -LO https://releases.hashicorp.com/terraform/0.12.24/terraform_0.12.24_linux_amd64.zip
       - unzip terraform_0.12.24_linux_amd64.zip -d /usr/local/bin/
+      - echo "Install phase completed"
+      - ls -al /usr/local/bin/
   pre_build:
     commands:
-      - echo Pre-build started
+      - echo "Pre-build phase started"
       - ls -al  # List all files to verify the structure
+      - echo "Pre-build phase completed"
   build:
     commands:
+      - echo "Build phase started"
       - terraform init
       - terraform apply -auto-approve
       - ls -al  # List all files to verify the structure
+      - echo "Build phase completed"
   post_build:
     commands:
-      - echo Build completed
+      - echo "Post-build phase started"
       - mkdir -p output
-      - cp /path/to/generated/file output/ || { echo "File not found"; exit 1; }  # Ensure the file exists before copying
-      - ls -al output  # List the contents of the output directory
+      - ls -al  # Verify files before copying
+      - cp terraform.tfstate output/ || { echo "File not found"; exit 1; }
+      - ls -al output  # List the contents of the output directory to verify the file is copied
+      - echo "Post-build phase completed"
 
 artifacts:
   files:
