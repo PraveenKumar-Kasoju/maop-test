@@ -3,18 +3,31 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 14  # Or any other runtime required
+      python: 3.x # Specify the Python version if needed
     commands:
-      - npm install
+      - echo Installing Terraform
+      - wget https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip
+      - unzip terraform_1.0.11_linux_amd64.zip
+      - mv terraform /usr/local/bin/
+      - terraform --version
+
+  pre_build:
+    commands:
+      - echo Initializing Terraform
+      - cd terraform
+      - terraform init
 
   build:
     commands:
-      - npm run build
+      - echo Planning Terraform Deployment
+      - terraform plan -out=tfplan
 
   post_build:
     commands:
-      - echo "Build completed successfully."
+      - echo Applying Terraform Deployment
+      - terraform apply -auto-approve tfplan
 
 artifacts:
   files:
-    - '**/*'
+    - terraform/terraform.tfstate
+    - terraform/terraform.tfstate.backup
