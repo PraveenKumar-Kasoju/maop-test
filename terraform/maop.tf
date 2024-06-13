@@ -1,117 +1,86 @@
 provider "aws" {
-  region = "us-east-1"
-}
-
-resource "aws_vpc" "example_vpc" {
-  cidr_block = "10.0.0.0/16"
-}
-
-resource "aws_subnet" "example_subnet_a" {
-  vpc_id            = aws_vpc.example_vpc.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = "us-east-1a"
-}
-
-resource "aws_subnet" "example_subnet_b" {
-  vpc_id            = aws_vpc.example_vpc.id
-  cidr_block        = "10.0.2.0/24"
-  availability_zone = "us-east-1b"
+  region                   = "es-east-1"
 }
 
 resource "aws_iam_role" "lambda_role" {
-  name = "lambda_execution_role"
-
-  assume_role_policy = <<EOF
+ name   = "terraform_aws_lambda_role"
+ assume_role_policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
       "Principal": {
         "Service": "lambda.amazonaws.com"
       },
-      "Action": "sts:AssumeRole"
+      "Effect": "Allow",
+      "Sid": ""
     }
   ]
 }
 EOF
 }
 
-resource "aws_iam_role_policy" "lambda_policy" {
-  name   = "lambda_policy"
-  role   = aws_iam_role.lambda_role.id
+# IAM policy for logging from a lambda
 
+resource "aws_iam_policy" "iam_policy_for_lambda" {
+
+  name         = "aws_iam_policy_for_terraform_aws_lambda_role"
+  path         = "/"
+  description  = "AWS IAM Policy for managing aws lambda role"
   policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Effect": "Allow",
       "Action": [
         "logs:CreateLogGroup",
         "logs:CreateLogStream",
         "logs:PutLogEvents"
       ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ec2:CreateNetworkInterface",
-        "ec2:DescribeNetworkInterfaces",
-        "ec2:DeleteNetworkInterface"
-      ],
-      "Resource": "*"
+      "Resource": "arn:aws:logs:*:*:*",
+      "Effect": "Allow"
     }
   ]
 }
 EOF
 }
 
-resource "aws_security_group" "example_security_group" {
-  name        = "example-security-group"
-  description = "Example security group for Lambda function"
-  vpc_id      = aws_vpc.example_vpc.id
+# Policy Attachment on the role.
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["192.168.1.0/24"] 
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
+  role        = aws_iam_role.lambda_role.name
+  policy_arn  = aws_iam_policy.iam_policy_for_lambda.arn
 }
 
-resource "aws_lambda_function" "example_lambda" {
-  filename         = "example_lambda.zip"
-  function_name    = "example_lambda_function"
-  role             = aws_iam_role.lambda_role.arn
-  handler          = "example_lambda.lambda_handler"
-  source_code_hash = filebase64sha256("example_lambda.zip")
-  runtime          = "python3.8"
+# Generates an archive from content, a file, or a directory of files.
 
-  vpc_config {
-    subnet_ids         = [aws_subnet.example_subnet_a.id, aws_subnet.example_subnet_b.id]
-    security_group_ids = [aws_security_group.example_security_group.id]
-  }
+data "archive_file" "zip_the_python_code" {
+ type        = "zip"
+ source_dir  = "${path.module}/python/"
+ output_path = "${path.module}/python/hello-python.zip"
 }
 
-resource "aws_lambda_permission" "allow_api_gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.example_lambda.function_name
-  principal     = "apigateway.amazonaws.com"
+# Create a lambda function
+# In terraform ${path.module} is the current directory.
+resource "aws_lambda_function" "terraform_lambda_func" {
+ filename                       = "${path.module}/python/hello-python.zip"
+ function_name                  = "Jhooq-Lambda-Function"
+ role                           = aws_iam_role.lambda_role.arn
+ handler                        = "hello-python.lambda_handler"
+ runtime                        = "python3.8"
+ depends_on                     = [aws_iam_role_policy_attachment.attach_iam_policy_to_iam_role]
+}
+
+
+output "teraform_aws_role_output" {
+ value = aws_iam_role.lambda_role.name
+}
+
+output "teraform_aws_role_arn_output" {
+ value = aws_iam_role.lambda_role.arn
+}
+
+output "teraform_logging_arn_output" {
+ value = aws_iam_policy.iam_policy_for_lambda.arn
 }
