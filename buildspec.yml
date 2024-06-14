@@ -1,31 +1,23 @@
+version: 0.2
+
 phases:
   install:
     runtime-versions:
-      python: 3.x
+      python: 3.8
     commands:
-      - echo Installing Terraform (version 0.2)
-      - wget https://releases.hashicorp.com/terraform/0.2.x/terraform_0.2_linux_amd64.zip  # Download version 0.2
-      - unzip -r terraform_0.2_linux_amd64.zip  # Update filename for extracted binary
-      - mv terraform /usr/local/bin/
-      - terraform --version
-
-  pre_build:
-    commands:
-      - echo Initializing Terraform
-      - cd terraform
-      - terraform init
+      - echo "Installing dependencies..."
+      - pip install -r requirements.txt -t lib
 
   build:
     commands:
-      - echo Planning Terraform Deployment
-      - terraform plan -out=tfplan
+      - echo "Building application..."
+      - python build_script.py
 
   post_build:
     commands:
-      - echo Applying Terraform Deployment
-      - terraform apply -auto-approve tfplan
+      - echo "Packaging artifacts..."
+      - zip -r myapp.zip .
 
 artifacts:
   files:
-    - terraform/terraform.tfstate
-    - terraform/terraform.tfstate.backup
+    - myapp.zip
